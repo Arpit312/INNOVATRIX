@@ -10,24 +10,28 @@ import {
   ChevronDown,
   Zap,
 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { USER } from "../data/dummyData";
 
 const NAV_LINKS = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "portfolio", label: "Portfolio", icon: BookOpen },
-  { id: "network", label: "Network", icon: Users },
+  { path: "/", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/portfolio", label: "Portfolio", icon: BookOpen },
+  { path: "/network", label: "Network", icon: Users },
 ];
 
-export default function Navbar({ activePage, setActivePage, onVerify }) {
+export default function Navbar({ onVerify }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setActivePage("dashboard")}>
+          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate("/")}>
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-200">
               <Shield size={16} className="text-white" />
             </div>
@@ -38,20 +42,24 @@ export default function Navbar({ activePage, setActivePage, onVerify }) {
 
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => setActivePage(id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-                  activePage === id
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                }`}
-              >
-                <Icon size={15} />
-                {label}
-              </button>
-            ))}
+            {NAV_LINKS.map(({ path, label, icon: Icon }) => {
+              const isActive = location.pathname === path;
+
+              return (
+                <button
+                  key={path}
+                  onClick={() => navigate(path)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                    isActive
+                      ? "bg-indigo-50 text-indigo-700"
+                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                  }`}
+                >
+                  <Icon size={15} />
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Desktop Right */}
@@ -117,20 +125,24 @@ export default function Navbar({ activePage, setActivePage, onVerify }) {
       {/* Mobile Menu */}
       {mobileOpen && (
         <div className="md:hidden bg-white border-t border-slate-100 px-4 py-4 space-y-1">
-          {NAV_LINKS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => { setActivePage(id); setMobileOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                activePage === id
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              <Icon size={16} />
-              {label}
-            </button>
-          ))}
+          {NAV_LINKS.map(({ path, label, icon: Icon }) => {
+            const isActive = location.pathname === path;
+
+            return (
+              <button
+                key={path}
+                onClick={() => { navigate(path); setMobileOpen(false); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700"
+                    : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <Icon size={16} />
+                {label}
+              </button>
+            );
+          })}
           <div className="pt-2 border-t border-slate-100">
             <button
               onClick={() => { onVerify(); setMobileOpen(false); }}
