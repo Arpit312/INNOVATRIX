@@ -36,7 +36,7 @@ export default function Navbar({ onVerify }) {
               <Shield size={16} className="text-white" />
             </div>
             <span className="text-slate-900 font-bold text-lg tracking-tight">
-              Trust<span className="text-indigo-600">Folio</span>
+              ProofStack<span className="text-indigo-600">AI</span>
             </span>
           </div>
 
