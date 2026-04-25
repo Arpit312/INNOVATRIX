@@ -1,8 +1,7 @@
-/** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
-    "./src/*/.{js,jsx,ts,tsx}",  // ✅ Vite ke liye important
+    "./src/**/*.{js,jsx,ts,tsx}",   // ✅ FIXED
   ],
   theme: {
     extend: {},
