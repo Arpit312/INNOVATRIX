@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Portfolio from "./pages/Portfolio";
 import Network from "./pages/Network";
 import SessionPage from "./pages/SessionPage";
+import LoginPage from "./pages/login";
 import VerifySkillModal from "./components/VerifySkillModal";
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/network" element={<Network />} />
           <Route path="/sessions" element={<SessionPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

@@ -69,6 +69,12 @@ export default function Navbar({ onVerify }) {
           {/* Desktop Right */}
           <div className="hidden md:flex items-center gap-3">
             <button
+              onClick={() => navigate("/login")}
+              className="rounded-full border border-indigo-100 bg-white text-indigo-700 text-sm font-semibold px-4 py-2 transition hover:bg-indigo-50"
+            >
+              Sign In
+            </button>
+            <button
               onClick={onVerify}
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm shadow-indigo-200"
             >
@@ -173,7 +179,16 @@ export default function Navbar({ onVerify }) {
               </button>
             );
           })}
-          <div className="pt-2 border-t border-slate-100">
+          <div className="pt-2 border-t border-slate-100 space-y-2">
+            <button
+              onClick={() => {
+                navigate("/login");
+                setMobileOpen(false);
+              }}
+              className="w-full rounded-full border border-indigo-100 bg-white text-indigo-700 text-sm font-semibold px-4 py-3 transition hover:bg-indigo-50"
+            >
+              Sign In
+            </button>
             <button
               onClick={() => {
                 onVerify();
