@@ -1,10 +1,10 @@
 export const USER = {
-  name: "Arya Mehta",
+  name: "Arpit Pathak",
   title: "Full-Stack Engineer & UX Strategist",
   avatar: "https://api.dicebear.com/7.x/lorelei/svg?seed=arya",
   trustScore: 91,
   badges: ["Verified Expert", "Top Contributor"],
-  location: "Mumbai, India",
+  location: "bhopal, India",
   joinDate: "Jan 2022",
 };
 
