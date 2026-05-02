@@ -1,326 +1,48 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Camera, CameraOff, CheckCircle2, Crown, Mic, MicOff, Phone, PhoneOff, Play, Send, ShieldCheck, Sparkles, Video, Zap, Brain, Cpu, Activity } from "lucide-react";
+import { PageFrame, GlassCard, CyberBadge } from "../components/MotionPrimitives";
+import { cn } from "../lib/utils";
+import { itemMotion, pageMotion } from "../lib/motion";
 
-// ─── Data ────────────────────────────────────────────────────────────────────
-const SKILLS   = ["React / Frontend", "Python / AI", "Data Structures", "Node.js"];
-const LEVELS   = ["Beginner", "Intermediate", "Advanced"];
-const GOALS    = ["Job Prep", "Internship", "Hackathon", "Self Growth"];
+const SKILLS = ["React / Frontend", "Python / AI", "Data Structures", "Node.js"];
+const LEVELS = ["Beginner", "Intermediate", "Advanced"];
+const GOALS = ["Job Prep", "Internship", "Hackathon", "Self Growth"];
 const MAX_FREE = 3;
 
 const AI_REPLIES = [
-  (skill, level, goal) =>
-    `Hi there! 👋 I'm your You Mentor. I see you want to master **${skill}** at **${level}** level for **${goal}** — that's an awesome goal!\n\nTo build your personalised roadmap, tell me: what have you already built or learned so far?`,
-  () =>
-    `Great start! 🚀 For React / Frontend, I'd recommend solidifying your understanding of component lifecycle and hooks first.\n\nHave you tried building a small project with **useState** and **useEffect** yet? That's usually the best way to cement the fundamentals.`,
-  () =>
-    `Love the energy! 💡 Consistency beats intensity — aim for **2 focused hours daily**: one on theory, one on building.\n\nI suggest a mini **Todo App** as your next milestone. Want to hop on a call and walk through the architecture together?`,
-  () =>
-    `Excellent session today! 🎯 Here's your quick roadmap:\n\n**Week 1** — React basics & JSX\n**Week 2** — State management & hooks\n**Week 3** — API integration & real projects\n\nYou've reached the end of your free session. Upgrade to keep the momentum going!`,
+  (skill, level, goal) => `I see you want to master ${skill} at ${level} level for ${goal}. To build a sharp roadmap, tell me what you have already built or learned so far.`,
+  () => "Great start. For React / Frontend, focus on component thinking, hooks, and state flow first. A small dashboard project is the fastest way to turn concepts into proof.",
+  () => "Consistency beats intensity. Aim for two focused hours daily: one for concepts, one for building. Your next milestone should be a polished Todo or Kanban app with persistence.",
+  () => "Session summary: Week 1 covers fundamentals, Week 2 focuses on hooks and APIs, Week 3 turns the project into portfolio evidence. Your free session limit is complete.",
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-const fmtTime = (s) =>
-  `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
-
-function ChipGroup({ label, icon, options, value, onChange }) {
-  return (
-    <div className="mb-5">
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-stone-400 mb-2.5">
-        <span>{icon}</span>
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {options.map((o) => (
-          <button
-            key={o}
-            onClick={() => onChange(o)}
-            className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all duration-150 cursor-pointer select-none
-              ${value === o
-                ? "bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-300"
-                : "bg-stone-50 border-stone-200 text-stone-500 hover:border-indigo-300 hover:text-indigo-600"
-              }`}
-          >
-            {o}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TypingBubble() {
-  return (
-    <div className="flex items-end gap-2.5 animate-[fadeUp_0.3s_ease_forwards]">
-      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-[13px] text-white flex-shrink-0">
-        ✦
-      </div>
-      <div className="bg-white border border-stone-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-        <div className="flex gap-1.5 items-center h-4">
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="w-2 h-2 rounded-full bg-indigo-400 inline-block"
-              style={{ animation: `blink 1.2s ${i * 0.2}s infinite` }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Message({ msg }) {
-  if (msg.type === "system") {
-    return (
-      <div className="flex justify-center">
-        <span className="text-[11px] text-stone-400 bg-stone-100 border border-stone-200 rounded-full px-3 py-1">
-          {msg.text}
-        </span>
-      </div>
-    );
-  }
-
-  const isAI = msg.sender === "ai";
-
-  return (
-    <div
-      className={`flex items-end gap-2.5 animate-[fadeUp_0.3s_ease_forwards] ${
-        isAI ? "" : "flex-row-reverse"
-      }`}
-    >
-      <div
-        className={`w-7 h-7 rounded-full flex items-center justify-center text-[13px] flex-shrink-0 ${
-          isAI
-            ? "bg-gradient-to-br from-indigo-500 to-violet-500 text-white"
-            : "bg-stone-200 text-stone-600"
-        }`}
-      >
-        {isAI ? "✦" : "👤"}
-      </div>
-      <div
-        className={`max-w-[75%] px-4 py-3 rounded-2xl text-[13.5px] leading-relaxed shadow-sm ${
-          isAI
-            ? "bg-white border border-stone-100 text-stone-800 rounded-bl-sm"
-            : "bg-indigo-600 text-white rounded-br-sm"
-        }`}
-      >
-        {msg.text.split("\n").map((line, i, arr) => (
-          <span key={i}>
-            <span
-              dangerouslySetInnerHTML={{
-                __html: line.replace(
-                  /\*\*(.*?)\*\*/g,
-                  `<strong class="${isAI ? "text-indigo-700" : "text-indigo-100"}">$1</strong>`
-                ),
-              }}
-            />
-            {i < arr.length - 1 && <br />}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Call Overlay ─────────────────────────────────────────────────────────────
-function CallOverlay({ callType, onEnd }) {
-  const [sec, setSec]       = useState(0);
-  const [muted, setMuted]   = useState(false);
-  const [camOff, setCamOff] = useState(false);
-  const [stream, setStream] = useState(null);
-  const videoRef            = useRef(null);
-  const timerRef            = useRef(null);
-
-  useEffect(() => {
-    timerRef.current = setInterval(() => setSec((s) => s + 1), 1000);
-    if (callType === "video") {
-      navigator.mediaDevices
-        .getUserMedia({ video: true, audio: true })
-        .then((s) => {
-          setStream(s);
-          if (videoRef.current) videoRef.current.srcObject = s;
-        })
-        .catch(() => {});
-    }
-    return () => {
-      clearInterval(timerRef.current);
-      if (stream) stream.getTracks().forEach((t) => t.stop());
-    };
-  }, []);                   // eslint-disable-line
-
-  const handleEnd = () => {
-    clearInterval(timerRef.current);
-    if (stream) stream.getTracks().forEach((t) => t.stop());
-    onEnd(callType, fmtTime(sec));
-  };
-
-  const toggleMute = () => {
-    if (stream) stream.getAudioTracks().forEach((t) => (t.enabled = muted));
-    setMuted((m) => !m);
-  };
-
-  const toggleCam = () => {
-    if (stream) stream.getVideoTracks().forEach((t) => (t.enabled = camOff));
-    setCamOff((c) => !c);
-  };
-
-  return (
-    <div className="absolute inset-0 z-50 bg-[#0D0B19] flex flex-col overflow-hidden animate-[fadeIn_0.3s_ease]">
-      {/* ambient blobs */}
-      <div className="absolute w-72 h-72 rounded-full bg-indigo-600/20 blur-[90px] -top-16 -left-16 animate-[blobFloat_8s_ease-in-out_infinite_alternate]" />
-      <div className="absolute w-60 h-60 rounded-full bg-violet-600/20 blur-[90px] -bottom-10 -right-10 animate-[blobFloat_8s_4s_ease-in-out_infinite_alternate]" />
-
-      {/* PIP */}
-      {callType === "video" && (
-        <div className="absolute top-4 right-4 w-28 h-40 rounded-xl overflow-hidden border border-white/10 bg-stone-900 z-10 shadow-xl">
-          {stream && !camOff ? (
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-3xl text-white/30">👤</div>
-          )}
-        </div>
-      )}
-
-      {/* Centre content */}
-      <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-        <div
-          className="w-28 h-28 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-4xl text-white mb-5 shadow-2xl"
-          style={{ animation: "ringPulse 2s infinite" }}
-        >
-          ✦
-        </div>
-        <h2 className="text-white text-2xl font-bold mb-1">You Mentor</h2>
-        <p className="text-white/40 text-sm mb-2 font-mono">{callType === "video" ? "Video Call" : "Voice Call"}</p>
-        <p className="text-white text-3xl font-bold font-mono tracking-widest">{fmtTime(sec)}</p>
-      </div>
-
-      {/* Controls */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-5 z-10">
-        <CtrlBtn
-          active={muted}
-          icon={muted ? "🔇" : "🎙️"}
-          label="Mute"
-          onClick={toggleMute}
-        />
-        {callType === "video" && (
-          <CtrlBtn
-            active={camOff}
-            icon={camOff ? "🚫" : "📷"}
-            label="Camera"
-            onClick={toggleCam}
-          />
-        )}
-        <div className="flex flex-col items-center">
-          <button
-            onClick={handleEnd}
-            className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 text-white text-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg shadow-red-500/30"
-          >
-            📵
-          </button>
-          <span className="text-[10px] text-white/30 mt-1">End</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CtrlBtn({ icon, label, active, onClick }) {
-  return (
-    <div className="flex flex-col items-center">
-      <button
-        onClick={onClick}
-        className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all hover:scale-105 active:scale-95
-          ${active ? "bg-white/25 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}
-      >
-        {icon}
-      </button>
-      <span className="text-[10px] text-white/30 mt-1">{label}</span>
-    </div>
-  );
-}
-
-// ─── Paywall ─────────────────────────────────────────────────────────────────
-function Paywall({ onClose }) {
-  const features = [
-    "Unlimited Video & Audio Calls",
-    "Personalised Roadmap Tracker",
-    "Deep-dive Code Reviews",
-    "Mock Interview Simulator",
-  ];
-  return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center p-5 backdrop-blur-md bg-stone-100/80 animate-[fadeIn_0.35s_ease]">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-stone-100 overflow-hidden animate-[slideUp_0.35s_ease]">
-        <div className="h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
-        <div className="p-7">
-          <div className="text-3xl mb-3">🔓</div>
-          <h2 className="text-xl font-bold text-stone-900 mb-1.5">Free Session Complete</h2>
-          <p className="text-stone-500 text-[13px] leading-relaxed mb-5">
-            You've finished your free 1-on-1 session! Upgrade to unlock unlimited live calls and keep your momentum going.
-          </p>
-          <ul className="space-y-2.5 mb-5">
-            {features.map((f) => (
-              <li key={f} className="flex items-center gap-2.5 text-[13px] text-stone-700">
-                <span className="text-emerald-500 font-bold text-sm">✓</span>
-                {f}
-              </li>
-            ))}
-          </ul>
-          <div className="flex items-center justify-between bg-stone-50 rounded-xl p-4 border border-stone-200 mb-5">
-            <div>
-              <p className="text-[11px] text-stone-400 font-medium mb-0.5">Premium Plan</p>
-              <p className="text-2xl font-bold text-stone-900">
-                $19<span className="text-sm font-normal text-stone-400">/mo</span>
-              </p>
-            </div>
-            <span className="bg-emerald-50 text-emerald-600 text-[11px] font-semibold px-3 py-1 rounded-full border border-emerald-100">
-              Save 20%
-            </span>
-          </div>
-          <button className="w-full py-3.5 bg-stone-900 text-white rounded-xl font-semibold text-sm hover:bg-stone-800 transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-md mb-3">
-            Upgrade Now →
-          </button>
-          <button
-            onClick={onClose}
-            className="w-full py-2 text-stone-400 text-sm hover:text-stone-700 transition-colors"
-          >
-            Maybe later
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Main App ─────────────────────────────────────────────────────────────────
-export default function App() {
-  const [skill, setSkill]         = useState("React / Frontend");
-  const [level, setLevel]         = useState("Beginner");
-  const [goal, setGoal]           = useState("Job Prep");
-  const [started, setStarted]     = useState(false);
-  const [messages, setMessages]   = useState([]);
-  const [input, setInput]         = useState("");
-  const [typing, setTyping]       = useState(false);
+export default function SessionPage() {
+  const [skill, setSkill] = useState("React / Frontend");
+  const [level, setLevel] = useState("Beginner");
+  const [goal, setGoal] = useState("Job Prep");
+  const [started, setStarted] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
   const [userCount, setUserCount] = useState(0);
-  const [limitHit, setLimitHit]   = useState(false);
-  const [showPay, setShowPay]     = useState(false);
-  const [call, setCall]           = useState(null); // 'audio' | 'video' | null
-  const endRef                    = useRef(null);
+  const [limitHit, setLimitHit] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [call, setCall] = useState(null);
+  const endRef = useRef(null);
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, typing]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, typing]);
 
-  const addMsg = (sender, text, type = "chat") =>
-    setMessages((prev) => [...prev, { id: Date.now() + Math.random(), sender, text, type }]);
+  const addMsg = useCallback((sender, text, type = "chat") => {
+    setMessages((prev) => [...prev, { id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`, sender, text, type }]);
+  }, []);
 
   const startSession = () => {
     setStarted(true);
     setTyping(true);
-    setTimeout(() => {
-      setTyping(false);
-      addMsg("ai", AI_REPLIES[0](skill, level, goal));
-    }, 1200);
+    window.setTimeout(() => { setTyping(false); addMsg("ai", AI_REPLIES[0](skill, level, goal)); }, 800);
   };
 
   const sendMessage = useCallback(() => {
@@ -330,196 +52,483 @@ export default function App() {
     setTyping(true);
     const next = userCount + 1;
     setUserCount(next);
-    setTimeout(() => {
+    window.setTimeout(() => {
       setTyping(false);
       addMsg("ai", AI_REPLIES[Math.min(next, AI_REPLIES.length - 1)](skill, level, goal));
-      if (next >= MAX_FREE) {
-        setLimitHit(true);
-        setTimeout(() => setShowPay(true), 600);
-      }
-    }, 1400);
-  }, [input, limitHit, typing, userCount, skill, level, goal]);
+      if (next >= MAX_FREE) { setLimitHit(true); window.setTimeout(() => setShowPaywall(true), 500); }
+    }, 950);
+  }, [addMsg, goal, input, level, limitHit, skill, typing, userCount]);
 
-  const handleCallEnd = (type, duration) => {
-    setCall(null);
-    addMsg("", `${type === "video" ? "📹 Video" : "🎙️ Voice"} call ended • ${duration}`, "system");
-  };
+  const handleCallEnd = (type, duration) => { setCall(null); addMsg("system", `${type === "video" ? "Video" : "Voice"} call ended after ${duration}`, "system"); };
 
-  const msgsLeft = MAX_FREE - userCount;
-  const progress = (msgsLeft / MAX_FREE) * 100;
+  const messagesLeft = Math.max(MAX_FREE - userCount, 0);
+  const progress = (messagesLeft / MAX_FREE) * 100;
 
   return (
-    <>
-      {/* Keyframe injection */}
-      <style>{`
-        @keyframes fadeUp   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
-        @keyframes slideUp  { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes blink    { 0%,80%,100% { opacity:0.3; } 40% { opacity:1; } }
-        @keyframes blobFloat{ 0% { transform:translate(0,0); } 100% { transform:translate(30px,20px); } }
-        @keyframes ringPulse{ 0%{box-shadow:0 0 0 0 rgba(99,102,241,.5);} 70%{box-shadow:0 0 0 24px rgba(99,102,241,0);} 100%{box-shadow:0 0 0 0 rgba(99,102,241,0);} }
-        @keyframes floatIcon{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
-        .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
-      `}</style>
+    <PageFrame className="pb-6">
+      <motion.div
+        variants={pageMotion}
+        initial="initial"
+        animate="animate"
+        className="grid min-h-[calc(100vh-7rem)] overflow-hidden rounded-2xl border border-cyan-400/18 bg-slate-950/88 shadow-2xl backdrop-blur-2xl lg:grid-cols-[300px_1fr] relative"
+        style={{ boxShadow: "0 0 100px rgba(0,245,255,0.07), 0 0 50px rgba(124,58,237,0.05)" }}
+      >
+        {/* Ambient corner glows */}
+        <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full blur-3xl pointer-events-none"
+          style={{ background: "rgba(0,245,255,0.05)" }} />
+        <div className="absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-3xl pointer-events-none"
+          style={{ background: "rgba(124,58,237,0.05)" }} />
 
-      <div className="flex flex-col h-screen bg-[#F7F6F3] font-sans overflow-hidden">
+        {/* ── Sidebar ── */}
+        <aside className="border-b border-white/8 bg-white/3 lg:border-b-0 lg:border-r relative overflow-hidden">
+          <div className="scan-sweep" />
+          {/* Sidebar ambient */}
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ background: "radial-gradient(ellipse at top, rgba(0,245,255,0.04), transparent 60%)" }} />
 
-        {/* ── NAV ── */}
-        <nav className="flex items-center justify-between px-6 h-14 bg-white border-b border-stone-200 flex-shrink-0 z-20">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-sm shadow-sm">
-              ✦
-            </div>
-            <div>
-              <p className="text-[15px] font-bold leading-none text-stone-900 tracking-tight">Personal Mentor</p>
-              <p className="text-[10px] text-stone-400 mt-0.5">Personalised 1-on-1</p>
+          <div className="border-b border-white/8 p-5 relative">
+            <CyberBadge className="mb-3"><Sparkles size={12} />AI Mentor</CyberBadge>
+            <h1 className="text-2xl font-black text-white">Session Studio</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-400">Create a focused learning plan and turn progress into portfolio proof.</p>
+
+            {/* Animated AI indicator */}
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-cyan-400/15 bg-cyan-400/5 px-3 py-2">
+              <div className="relative">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg, #00c8ff, #7c3aed)" }}>
+                  <Brain size={14} className="text-white" />
+                </div>
+                <motion.div
+                  className="absolute inset-0 rounded-lg border border-cyan-400/40"
+                  animate={{ scale: [1, 1.4], opacity: [0.6, 0] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
+                />
+              </div>
+              <div>
+                <p className="text-xs font-black text-white">ProofStack AI</p>
+                <p className="text-xs text-emerald-400 font-semibold">Ready to mentor</p>
+              </div>
             </div>
           </div>
-          <span className="bg-indigo-50 text-indigo-600 text-[11px] font-semibold px-3 py-1 rounded-full border border-indigo-100">
-            Free Plan
-          </span>
-        </nav>
 
-        {/* ── BODY ── */}
-        <div className="flex flex-1 overflow-hidden">
+          <div className="space-y-5 p-5 relative">
+            <ChipGroup label="Skill Focus" options={SKILLS} value={skill} onChange={setSkill} />
+            <ChipGroup label="Level" options={LEVELS} value={level} onChange={setLevel} />
+            <ChipGroup label="Goal" options={GOALS} value={goal} onChange={setGoal} />
 
-          {/* ── SIDEBAR ── */}
-          <aside className="w-72 flex-shrink-0 bg-white border-r border-stone-200 flex flex-col overflow-hidden">
-            <div className="px-5 py-4 border-b border-stone-100">
-              <p className="text-[13px] font-semibold text-stone-800">Session Setup</p>
-              <p className="text-[11px] text-stone-400 mt-0.5">Configure your learning profile</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-thin scrollbar-thumb-stone-200">
-              <ChipGroup label="Skill Focus"   icon="⚡" options={SKILLS} value={skill} onChange={setSkill} />
-              <ChipGroup label="Your Level"    icon="🎯" options={LEVELS} value={level} onChange={setLevel} />
-              <ChipGroup label="Primary Goal"  icon="🏆" options={GOALS}  value={goal}  onChange={setGoal}  />
-
-              {!started ? (
-                <button
-                  onClick={startSession}
-                  className="mt-4 w-full py-3.5 rounded-xl bg-indigo-600 text-white text-[13px] font-semibold flex items-center justify-center gap-2 shadow-md shadow-indigo-200 hover:bg-indigo-700 transition-all hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  Start Free Session
-                  <span className="text-indigo-200 text-xs">→</span>
-                </button>
-              ) : (
-                <div className="mt-4 p-3.5 bg-indigo-50 rounded-xl border border-indigo-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold text-indigo-600">Session Active</span>
-                    <span className="text-[11px] text-stone-400 font-mono">
-                      {msgsLeft > 0 ? `${msgsLeft} left` : "Ended"}
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-indigo-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-indigo-500 rounded-full transition-all duration-700"
-                      style={{ width: `${Math.max(progress, 0)}%` }}
-                    />
-                  </div>
+            {!started ? (
+              <motion.button
+                type="button"
+                onClick={startSession}
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.97 }}
+                className="button-primary w-full"
+              >
+                <Play size={15} />Start Free Session
+              </motion.button>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl border border-cyan-400/22 bg-cyan-400/6 p-4 relative overflow-hidden"
+              >
+                <div className="scan-sweep" />
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-cyan-300">Session Active</span>
+                  <span className="text-xs font-bold text-slate-400">{messagesLeft} left</span>
                 </div>
-              )}
-            </div>
-          </aside>
-
-          {/* ── CHAT MAIN ── */}
-          <main className="flex-1 flex flex-col overflow-hidden bg-[#F7F6F3] relative">
-
-            {/* CHAT HEADER */}
-            {started && (
-              <div className="h-14 bg-white border-b border-stone-200 px-5 flex items-center justify-between flex-shrink-0 z-10">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-sm">
-                      ✦
-                    </div>
-                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
-                  </div>
-                  <div>
-                    <p className="text-[13px] font-semibold text-stone-900 leading-none">Your Mentor</p>
-                    <p className="text-[11px] text-emerald-500 font-medium mt-0.5">● Online</p>
-                  </div>
+                <div className="neon-progress">
+                  <motion.div animate={{ width: `${progress}%` }} className="neon-progress-fill" />
                 </div>
-                <div className="flex gap-2">
-                  {[
-                    { icon: "🎙️", type: "audio", label: "Voice Call" },
-                    { icon: "📹", type: "video", label: "Video Call" },
-                  ].map(({ icon, type, label }) => (
-                    <button
-                      key={type}
-                      title={label}
-                      disabled={limitHit}
-                      onClick={() => setCall(type)}
-                      className="w-9 h-9 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-center text-[15px] hover:bg-indigo-50 hover:border-indigo-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-                    >
-                      {icon}
-                    </button>
-                  ))}
+                <div className="mt-3 flex items-center gap-2">
+                  <motion.span
+                    animate={{ opacity: [1, 0.4, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="h-2 w-2 rounded-full bg-emerald-400"
+                    style={{ boxShadow: "0 0 8px rgba(52,211,153,0.6)" }}
+                  />
+                  <span className="text-xs text-slate-500">Live session in progress</span>
                 </div>
-              </div>
+              </motion.div>
             )}
 
-            {/* MESSAGES */}
-            {!started ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-                <div
-                  className="text-5xl mb-5"
-                  style={{ animation: "floatIcon 3s ease-in-out infinite" }}
-                >
-                  🤖
+            {/* Session stats */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Free msgs", value: `${messagesLeft}/${MAX_FREE}`, icon: Activity },
+                { label: "AI model", value: "GPT-4o", icon: Cpu },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="rounded-xl border border-white/8 bg-white/4 p-3">
+                  <Icon size={12} className="text-cyan-400 mb-1" />
+                  <p className="text-xs font-black text-white">{value}</p>
+                  <p className="text-[10px] text-slate-600 uppercase tracking-wider">{label}</p>
                 </div>
-                <h3 className="text-lg font-bold text-stone-800 mb-2">Mentor is ready</h3>
-                <p className="text-stone-400 text-[13px] leading-relaxed max-w-xs">
-                  Configure your profile on the left and click{" "}
-                  <strong className="text-indigo-600">Start Free Session</strong> to begin your personalised roadmap.
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* ── Main Chat Area ── */}
+        <main className="relative flex min-h-[680px] flex-col">
+          <SessionHeader started={started} limitHit={limitHit} onCall={setCall} />
+
+          {!started ? (
+            <div className="grid flex-1 place-items-center px-6 py-16 text-center relative">
+              {/* Idle background rings */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute rounded-full border border-cyan-400/10"
+                    style={{ width: 200 + i * 120, height: 200 + i * 120 }}
+                    animate={{ scale: [1, 1.08, 1], opacity: [0.3, 0.6, 0.3] }}
+                    transition={{ duration: 3 + i, repeat: Infinity, delay: i * 0.8, ease: "easeInOut" }}
+                  />
+                ))}
+              </div>
+
+              <motion.div variants={itemMotion} className="max-w-md relative z-10">
+                <div className="relative mx-auto mb-6 w-fit">
+                  <div
+                    className="grid h-20 w-20 place-items-center rounded-3xl border border-cyan-400/22 bg-cyan-400/8 text-cyan-300"
+                    style={{ boxShadow: "0 0 40px rgba(0,245,255,0.2)" }}
+                  >
+                    <Sparkles size={32} />
+                  </div>
+                  {/* Pulse rings */}
+                  {[0, 1].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute inset-0 rounded-3xl border border-cyan-400/25"
+                      animate={{ scale: [1, 1.8], opacity: [0.5, 0] }}
+                      transition={{ duration: 2, delay: i * 0.8, repeat: Infinity, ease: "easeOut" }}
+                    />
+                  ))}
+                </div>
+                <h2 className="text-3xl font-black text-white">Mentor is Ready</h2>
+                <p className="mt-3 text-sm leading-7 text-slate-400">
+                  Choose your learning profile on the left and begin a guided proof-building session.
+                </p>
+                <motion.div
+                  className="mt-6 inline-flex items-center gap-2 text-xs font-bold text-cyan-300 uppercase tracking-widest"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                  Waiting for session start
+                </motion.div>
+              </motion.div>
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-6">
+                <AnimatePresence initial={false}>
+                  {messages.map((msg) => <Message key={msg.id} msg={msg} />)}
+                  {typing && <TypingBubble />}
+                </AnimatePresence>
+                <div ref={endRef} />
+              </div>
+
+              {/* Input bar */}
+              <div className="border-t border-white/8 bg-slate-950/85 p-4 backdrop-blur-xl relative">
+                <div className="absolute top-0 inset-x-0 h-px"
+                  style={{ background: "linear-gradient(90deg, transparent, rgba(0,245,255,0.3), transparent)" }} />
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                    disabled={limitHit || typing}
+                    placeholder={limitHit ? "Session limit reached — upgrade to continue" : "Type your response..."}
+                    className="field"
+                  />
+                  <motion.button
+                    type="button"
+                    onClick={sendMessage}
+                    disabled={!input.trim() || limitHit || typing}
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.93 }}
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+                    style={{ background: "linear-gradient(135deg, #00c8ff, #7c3aed)", boxShadow: "0 0 20px rgba(0,200,255,0.3)" }}
+                    aria-label="Send"
+                  >
+                    <Send size={17} />
+                  </motion.button>
+                </div>
+                <p className="mt-3 flex items-center justify-center gap-2 text-xs font-semibold text-slate-600">
+                  <ShieldCheck size={12} />Secure 1-on-1 mentorship environment
                 </p>
               </div>
-            ) : (
-              <>
-                <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-5">
-                  {messages.map((msg) => (
-                    <Message key={msg.id} msg={msg} />
-                  ))}
-                  {typing && <TypingBubble />}
-                  <div ref={endRef} />
-                </div>
+            </>
+          )}
 
-                {/* INPUT */}
-                <div className="bg-white border-t border-stone-200 px-5 py-3.5 flex-shrink-0">
-                  <div className="flex gap-2.5 items-center">
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                      disabled={limitHit || typing}
-                      placeholder={limitHit ? "Session ended." : "Type your message…"}
-                      className="flex-1 bg-stone-50 border border-stone-200 rounded-full px-5 py-2.5 text-[13.5px] text-stone-800 outline-none placeholder-stone-300 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    <button
-                      onClick={sendMessage}
-                      disabled={!input.trim() || limitHit || typing}
-                      className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center text-base hover:bg-indigo-700 transition-all disabled:bg-stone-200 disabled:cursor-not-allowed hover:scale-105 active:scale-95 flex-shrink-0 shadow-sm shadow-indigo-200"
-                    >
-                      ➤
-                    </button>
-                  </div>
-                  <p className="text-center text-[11px] text-stone-300 mt-2 flex items-center justify-center gap-1">
-                    🔒 Secure 1-on-1 You Mentorship Environment
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* PAYWALL */}
-            {showPay && <Paywall onClose={() => setShowPay(false)} />}
-
-            {/* CALL OVERLAY */}
+          <AnimatePresence>
+            {showPaywall && <Paywall onClose={() => setShowPaywall(false)} />}
             {call && <CallOverlay callType={call} onEnd={handleCallEnd} />}
+          </AnimatePresence>
+        </main>
+      </motion.div>
+    </PageFrame>
+  );
+}
 
-          </main>
+function ChipGroup({ label, options, value, onChange }) {
+  return (
+    <div>
+      <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => (
+          <button key={opt} type="button" onClick={() => onChange(opt)} className={cn("rounded-full border px-3 py-1.5 text-xs font-bold transition", value === opt ? "border-cyan-400/30 bg-cyan-400/12 text-cyan-300" : "border-white/8 bg-white/4 text-slate-400 hover:text-white")}>
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SessionHeader({ started, limitHit, onCall }) {
+  return (
+    <div className="flex h-16 items-center justify-between border-b border-white/8 bg-slate-950/85 px-4 backdrop-blur-xl sm:px-6 relative">
+      <div className="absolute top-0 inset-x-0 h-px"
+        style={{ background: "linear-gradient(90deg, transparent, rgba(0,245,255,0.4), rgba(124,58,237,0.3), transparent)" }} />
+      <div className="flex items-center gap-3">
+        <div className="relative grid h-10 w-10 place-items-center rounded-xl text-white"
+          style={{ background: "linear-gradient(135deg, #00c8ff, #7c3aed)", boxShadow: "0 0 20px rgba(0,200,255,0.3)" }}>
+          <Sparkles size={17} />
+          {started && (
+            <>
+              <motion.span
+                className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-emerald-400"
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                style={{ border: "2px solid #020617", boxShadow: "0 0 8px rgba(52,211,153,0.6)" }}
+              />
+              <motion.div
+                className="absolute inset-0 rounded-xl border border-cyan-400/40"
+                animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+              />
+            </>
+          )}
+        </div>
+        <div>
+          <p className="text-sm font-black text-white">ProofStack Mentor</p>
+          <motion.p
+            animate={started ? { opacity: [0.7, 1, 0.7] } : {}}
+            transition={{ duration: 2, repeat: Infinity }}
+            className={cn("text-xs font-semibold", started ? "text-emerald-400" : "text-slate-500")}
+          >
+            {started ? "● Online" : "Waiting"}
+          </motion.p>
         </div>
       </div>
-    </>
+      <div className="flex gap-2">
+        {[
+          { type: "audio", icon: Phone, label: "Voice call" },
+          { type: "video", icon: Video, label: "Video call" },
+        ].map(({ type, icon: Icon, label }) => (
+          <motion.button
+            key={type}
+            type="button"
+            disabled={!started || limitHit}
+            onClick={() => onCall(type)}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.93 }}
+            className="grid h-9 w-9 place-items-center rounded-xl border border-white/8 bg-white/4 text-slate-400 transition hover:bg-white/8 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label={label}
+          >
+            <Icon size={15} />
+          </motion.button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Message({ msg }) {
+  if (msg.type === "system") {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex justify-center">
+        <span className="rounded-full border border-white/8 bg-white/5 px-3 py-1 text-xs font-bold text-slate-500">{msg.text}</span>
+      </motion.div>
+    );
+  }
+  const isAI = msg.sender === "ai";
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className={cn("flex items-end gap-3", isAI ? "" : "flex-row-reverse")}>
+      <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl", isAI ? "bg-cyan-400/12 text-cyan-300" : "bg-white/8 text-slate-300")}>
+        {isAI ? <Sparkles size={16} /> : <CheckCircle2 size={16} />}
+      </div>
+      <div className={cn("max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-7 shadow-lg", isAI ? "rounded-bl-md border border-white/8 bg-white/5 text-slate-200" : "rounded-br-md text-white")} style={!isAI ? { background: "linear-gradient(135deg, #00c8ff, #7c3aed)" } : {}}>
+        {msg.text}
+      </div>
+    </motion.div>
+  );
+}
+
+function TypingBubble() {
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-end gap-3">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cyan-400/12 text-cyan-300"><Sparkles size={16} /></div>
+      <div className="rounded-2xl rounded-bl-md border border-white/8 bg-white/5 px-4 py-4">
+        <div className="flex h-4 items-center gap-1.5">
+          {[0, 1, 2].map((dot) => (
+            <motion.span key={dot} animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }} transition={{ duration: 0.9, repeat: Infinity, delay: dot * 0.12 }} className="h-2 w-2 rounded-full bg-cyan-400" />
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function Paywall({ onClose }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-40 grid place-items-center bg-slate-950/80 p-5 backdrop-blur-xl">
+      <GlassCard className="w-full max-w-md p-7 text-center" hover={false}>
+        <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl border border-amber-400/20 bg-amber-400/8 text-amber-300" style={{ boxShadow: "0 0 20px rgba(251,191,36,0.15)" }}>
+          <Crown size={24} />
+        </div>
+        <h2 className="text-2xl font-black text-white">Free Session Complete</h2>
+        <p className="mt-3 text-sm leading-7 text-slate-400">Upgrade to continue mentorship, unlock unlimited calls, and generate deeper proof roadmaps.</p>
+        <div className="mt-5 rounded-2xl border border-white/8 bg-white/4 p-4 text-left">
+          {["Unlimited audio and video calls", "Personal roadmap tracker", "Deep code reviews", "Interview simulation"].map((f) => (
+            <p key={f} className="flex items-center gap-2 py-1.5 text-sm font-semibold text-slate-300"><CheckCircle2 size={14} className="text-emerald-400" />{f}</p>
+          ))}
+        </div>
+        <button className="button-primary mt-5 w-full"><Zap size={15} />Upgrade Plan</button>
+        <button type="button" onClick={onClose} className="mt-3 text-sm font-bold text-slate-500 transition hover:text-white">Maybe later</button>
+      </GlassCard>
+    </motion.div>
+  );
+}
+
+function CallOverlay({ callType, onEnd }) {
+  const [seconds, setSeconds] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [camOff, setCamOff] = useState(false);
+  const [streamReady, setStreamReady] = useState(false);
+  const streamRef = useRef(null);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setSeconds((v) => v + 1), 1000);
+    if (callType === "video") {
+      navigator.mediaDevices?.getUserMedia({ video: true, audio: true })
+        .then((stream) => { streamRef.current = stream; setStreamReady(true); if (videoRef.current) videoRef.current.srcObject = stream; })
+        .catch(() => setStreamReady(false));
+    }
+    return () => { window.clearInterval(timer); streamRef.current?.getTracks().forEach((t) => t.stop()); streamRef.current = null; };
+  }, [callType]);
+
+  const toggleMute = () => { streamRef.current?.getAudioTracks().forEach((t) => { t.enabled = muted; }); setMuted((v) => !v); };
+  const toggleCam = () => { streamRef.current?.getVideoTracks().forEach((t) => { t.enabled = camOff; }); setCamOff((v) => !v); };
+  const endCall = () => { streamRef.current?.getTracks().forEach((t) => t.stop()); onEnd(callType, fmtTime(seconds)); };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute inset-0 z-50 flex flex-col overflow-hidden bg-slate-950"
+    >
+      {/* Animated background */}
+      <div className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at center, rgba(0,245,255,0.07) 0%, rgba(124,58,237,0.05) 40%, transparent 70%)" }} />
+      <div className="scanlines pointer-events-none" />
+
+      {/* Video preview */}
+      {callType === "video" && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, x: 20 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          className="absolute right-5 top-5 z-10 h-40 w-28 overflow-hidden rounded-2xl border border-white/12 bg-white/5 shadow-2xl"
+          style={{ boxShadow: "0 0 30px rgba(0,0,0,0.5)" }}
+        >
+          {streamReady && !camOff
+            ? <video ref={videoRef} autoPlay playsInline muted className="h-full w-full scale-x-[-1] object-cover" />
+            : <div className="grid h-full w-full place-items-center text-slate-500"><CameraOff size={24} /></div>
+          }
+        </motion.div>
+      )}
+
+      {/* Center content */}
+      <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+        {/* Avatar with pulse rings */}
+        <div className="relative mb-8">
+          <motion.div
+            className="grid h-32 w-32 place-items-center rounded-3xl border border-cyan-400/22 bg-cyan-400/8 text-cyan-300"
+            animate={{ boxShadow: ["0 0 30px rgba(0,245,255,0.2)", "0 0 60px rgba(0,245,255,0.4)", "0 0 30px rgba(0,245,255,0.2)"] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+          >
+            {callType === "video" ? <Video size={44} /> : <Phone size={44} />}
+          </motion.div>
+          {/* Expanding rings */}
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              className="absolute inset-0 rounded-3xl border border-cyan-400/20"
+              animate={{ scale: [1, 2.2], opacity: [0.5, 0] }}
+              transition={{ duration: 2.5, delay: i * 0.8, repeat: Infinity, ease: "easeOut" }}
+            />
+          ))}
+        </div>
+
+        <h2 className="text-3xl font-black text-white">ProofStack Mentor</h2>
+        <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-500">
+          {callType === "video" ? "Video Call" : "Voice Call"}
+        </p>
+
+        {/* Timer */}
+        <motion.p
+          className="mt-6 font-mono text-5xl font-black tracking-widest text-white"
+          style={{ textShadow: "0 0 25px rgba(0,245,255,0.5)" }}
+          animate={{ opacity: [0.8, 1, 0.8] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        >
+          {fmtTime(seconds)}
+        </motion.p>
+
+        {/* Live indicator */}
+        <div className="mt-4 flex items-center gap-2">
+          <motion.span
+            animate={{ opacity: [1, 0.3, 1] }}
+            transition={{ duration: 1, repeat: Infinity }}
+            className="h-2 w-2 rounded-full bg-rose-400"
+            style={{ boxShadow: "0 0 8px rgba(248,113,113,0.8)" }}
+          />
+          <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Live</span>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center justify-center gap-4 pb-10">
+        <ControlButton active={muted} onClick={toggleMute} icon={muted ? MicOff : Mic} label="Mute" />
+        {callType === "video" && (
+          <ControlButton active={camOff} onClick={toggleCam} icon={camOff ? CameraOff : Camera} label="Camera" />
+        )}
+        <motion.button
+          type="button"
+          onClick={endCall}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.93 }}
+          className="grid h-16 w-16 place-items-center rounded-full bg-rose-500 text-white"
+          style={{ boxShadow: "0 0 30px rgba(239,68,68,0.5), 0 8px 30px rgba(0,0,0,0.4)" }}
+          aria-label="End call"
+        >
+          <PhoneOff size={24} />
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+}
+
+function ControlButton({ active, onClick, icon: Icon, label }) {
+  return (
+    <button type="button" onClick={onClick} className={cn("grid h-12 w-12 place-items-center rounded-full border border-white/10 transition", active ? "bg-white/20 text-white" : "bg-white/8 text-slate-300 hover:bg-white/12")} aria-label={label}>
+      <Icon size={20} />
+    </button>
   );
 }

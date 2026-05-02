@@ -4,14 +4,14 @@ export const USER = {
   avatar: "https://api.dicebear.com/7.x/lorelei/svg?seed=arya",
   trustScore: 91,
   badges: ["Verified Expert", "Top Contributor"],
-  location: "bhopal, India",
+  location: "Bhopal, India",
   joinDate: "Jan 2022",
 };
 
 export const PROJECTS = [
   {
     id: 1,
-    title: "FinFlow — Personal Finance OS",
+    title: "FinFlow - Personal Finance OS",
     description:
       "A real-time budget intelligence dashboard with ML-driven spending predictions, bank-grade encryption, and interactive Sankey charts.",
     tags: ["React", "FastAPI", "TensorFlow", "PostgreSQL"],
@@ -28,7 +28,7 @@ export const PROJECTS = [
   },
   {
     id: 2,
-    title: "EduTrack — LMS for Micro-Schools",
+    title: "EduTrack - LMS for Micro-Schools",
     description:
       "A lightweight learning management system built for grassroots education networks with offline-first PWA support and adaptive quizzing.",
     tags: ["Next.js", "Supabase", "Tailwind", "PWA"],
@@ -44,7 +44,7 @@ export const PROJECTS = [
   },
   {
     id: 3,
-    title: "ShardDB — Distributed Cache Layer",
+    title: "ShardDB - Distributed Cache Layer",
     description:
       "An open-source Redis-compatible caching middleware with consistent hashing, TTL-aware eviction, and Prometheus metrics out of the box.",
     tags: ["Go", "Redis", "Docker", "gRPC"],
@@ -59,7 +59,7 @@ export const PROJECTS = [
   },
   {
     id: 4,
-    title: "MoodMap — Sentiment Analytics",
+    title: "MoodMap - Sentiment Analytics",
     description:
       "A SaaS product that runs multi-lingual NLP pipelines over customer feedback streams, surfacing actionable sentiment trends in real time.",
     tags: ["Python", "spaCy", "Kafka", "D3.js"],
